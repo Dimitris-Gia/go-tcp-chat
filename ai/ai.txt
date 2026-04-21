@@ -1,0 +1,133 @@
+Date: 2026-02-16
+Model: Amazon Q Developer
+
+Conversation Summary:
+- User requested creation of a PRD (Product Requirements Document) for the ascii-art project
+- PRD was split into individual tasks (TASK-01 through TASK-11)
+- User requested help with creating correct unit tests for the project
+- User requested assistance with correcting parts of the code to work properly
+
+---
+
+
+Date: 2026-02-25
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- Reviewed repository files (source, tests, banners, docs, tasks) to reconcile documentation with implementation.
+- Updated `prd.md` to reflect current baseline behavior, target requirements, and known gaps.
+- Updated all task files (`TASK-01` to `TASK-11`) with status-based tracking (completed / in progress / blocked).
+- Updated `README.md` usage and behavior notes, including optional banner selection and current known gaps.
+
+---
+
+Date: 2026-02-17
+Model: Amazon Q Developer
+
+Conversation Summary:
+- User asked about creating conversation logging according to agents.md instructions
+- Discussion about yesterday's conversation and logging requirements
+- Created conversation log entries for both Feb 16 and Feb 17
+
+---
+
+
+Date: 2026-02-25
+Model: Amazon Q Developer
+
+Conversation Summary:
+- User requested review of ascii-art-fs project requirements and alignment with specification
+- Updated main.go to standardize usage message format: "Usage: go run . [STRING] [BANNER]\n\nEX: go run . something standard"
+- Updated error handling to print exactly "ERROR" for all failure cases (invalid characters, missing files)
+- Removed descriptive error messages from loader.go to align with ERROR-only policy
+- Updated prd.md to reflect completed implementation and resolved gaps
+- Updated README.md to document completion of all requirements
+- Updated task files TASK-08, TASK-09, TASK-10, and TASK-11 to COMPLETED status
+- Verified all tests pass and project builds successfully
+- Confirmed all three banners (standard, shadow, thinkertoy) work correctly
+- Project now fully complies with ascii-art-fs specification
+
+---
+
+Date: 2026-03-05
+Model: Claude Haiku 4.5
+
+Conversation Summary:
+- User requested creation of 5 new ASCII art banner files with intricate designs
+- Created 5 new banner styles with same 8-line height spacing as existing files:
+  1. gothic.txt - Bold block-style characters using █ symbols
+  2. cosmic.txt - Box-drawing border style using ╔═╗║╚╝ characters
+  3. diamond.txt - Diamond/geometric style using ◇ symbols
+  4. bubble.txt - Rounded bubble/circular style using ⭕ symbols
+  5. neon.txt - Mixed style using ╭╮╰╯─│◆ characters for distinctive look
+- All new banners maintain consistent 8-line height per character for compatibility
+- Each style features intricate, visually distinct designs more elaborate than originals
+- Updated all 5 banner files to include complete ASCII character set (space through ~) in the correct order matching standard.txt structure
+- Files now contain all 95 printable characters with proper alignment and formatting
+
+---
+
+
+=== 2025-01-27 ===
+Model: Claude 3.5 Sonnet
+
+User requested transition from ASCII-Art Web project to NetCat TCP Chat project.
+
+Actions taken:
+1. Updated prd.md to reflect NetCat TCP Chat requirements
+2. Updated README.md with NetCat project description and implementation details
+3. Created comprehensive task breakdown (Tasks 03-13) following TDD methodology
+4. Maintained existing code structure (main.go, parser, connection handler skeleton)
+
+Tasks created:
+- Task 03: Client data structure and management
+- Task 04: Welcome message and ASCII art
+- Task 05: Name registration
+- Task 06: Message history storage
+- Task 07: Message broadcasting
+- Task 08: Join notifications
+- Task 09: Leave notifications
+- Task 10: Connection limit (max 10)
+- Task 11: Input prompt handling
+- Task 12: Integration testing
+- Task 13: Final cleanup and documentation
+
+Current status: Ready to begin Task 03 following TDD approach.
+
+---
+
+Date: 2026-03-20
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User asked for a full project review and step-by-step guidance to complete NetCat TCP chat requirements.
+- Reviewed current implementation files (`main.go`, parser, server hub, connection handler), tests, README, and task breakdown.
+- Confirmed test baseline is currently minimal and passing, while most required chat features are still not implemented.
+- Prepared a TDD-first execution plan focused on completing tasks 03 through 13 in order.
+
+---
+
+Date: 2026-03-20
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User requested to skip TDD and asked for direct implementation guidance to actually complete the NetCat project.
+- Provided a practical implementation-first roadmap with file-by-file responsibilities and execution order.
+
+---
+
+Date: 2026-03-20
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User asked for elaboration on creating one shared `Hub` and one shared history store for the whole process.
+- Provided concrete dependency-flow guidance: initialize once in `main`, pass to each connection handler, and avoid per-connection state creation.
+
+---
+
+Date: 2026-03-20
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User asked why `mu` is undefined in `handler.go` when calling `history.mu.Lock()`.
+- Explained Go visibility rules: lowercase fields are unexported outside their package.
