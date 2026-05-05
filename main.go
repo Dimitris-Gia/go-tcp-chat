@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"net-cat/internal/connectionhandling"
+	"net-cat/internal/logging"
 	"net-cat/internal/parser"
 	"net-cat/internal/server"
 )
@@ -18,8 +19,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create logger
+	logger, err := logging.New("logs/audit.log")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logger.Close()
+
+	// Log server startup
+	logger.LogEvent(logging.LevelInfo, logging.EventServerStarted, logging.ServerStartedData(fmt.Sprintf("%d", port)))
+
 	// Shared state for the whole process — one hub, one history
-	hub := server.NewHub()
+	hub := server.NewHub(logger)
 	history := server.NewHistory()
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -35,8 +46,9 @@ func main() {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Print(err)
+			logger.LogError(err.Error())
 			continue
 		}
-		go connectionhandling.HandleConnection(conn, hub, history)
+		go connectionhandling.HandleConnection(conn, hub, history, logger)
 	}
 }

@@ -49,7 +49,21 @@ func (c *Client) Deliver(msg string) {
 
 // Prompt returns the formatted input prompt for this client.
 func (c *Client) Prompt() string {
-	return fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), c.Name)
+	return fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), c.GetName())
+}
+
+// GetName returns the client's current name safely.
+func (c *Client) GetName() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Name
+}
+
+// SetName updates the client's name safely.
+func (c *Client) SetName(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Name = name
 }
 
 // Close marks the client as done and closes the send channel,

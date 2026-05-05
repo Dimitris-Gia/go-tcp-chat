@@ -1,0 +1,23 @@
+{"timestamp":"2026-04-27T09:49:12Z","level":"INFO","eventType":"ServerStarted","data":{"port":"8989"}}
+{"timestamp":"2026-04-27T09:53:08Z","level":"INFO","eventType":"ServerStarted","data":{"port":"2525"}}
+{"timestamp":"2026-04-27T09:55:01Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"dimitris","ip":"[::1]:50288","port":""}}
+{"timestamp":"2026-04-27T09:55:05Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"marios","ip":"[::1]:43038","port":""}}
+{"timestamp":"2026-04-27T09:55:16Z","level":"INFO","eventType":"MessageSent","data":{"content":"hello","sender":"dimitris"}}
+{"timestamp":"2026-04-27T09:55:21Z","level":"INFO","eventType":"MessageSent","data":{"content":"ela re pws paei?","sender":"marios"}}
+{"timestamp":"2026-04-27T09:55:51Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"takis","ip":"[::1]:39242","port":""}}
+{"timestamp":"2026-04-27T09:56:39Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"takis"}}
+{"timestamp":"2026-04-27T09:59:11Z","level":"INFO","eventType":"MessageSent","data":{"content":"--userNameChange: kwstas","sender":"dimitris"}}
+{"timestamp":"2026-04-27T09:59:31Z","level":"INFO","eventType":"MessageSent","data":{"content":"lalal","sender":"dimitris"}}
+{"timestamp":"2026-04-27T09:59:33Z","level":"INFO","eventType":"MessageSent","data":{"content":"lallala","sender":"dimitris"}}
+{"timestamp":"2026-04-27T09:59:43Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"marios"}}
+{"timestamp":"2026-04-27T09:59:43Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"dimitris"}}
+{"timestamp":"2026-04-27T09:59:48Z","level":"INFO","eventType":"ServerStarted","data":{"port":"2525"}}
+{"timestamp":"2026-04-27T10:00:10Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"dimitris","ip":"[::1]:34488","port":""}}
+{"timestamp":"2026-04-27T10:00:24Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"marios","ip":"[::1]:41920","port":""}}
+{"timestamp":"2026-04-27T10:00:39Z","level":"INFO","eventType":"NameChanged","data":{"newName":"takis","oldName":"dimitris"}}
+{"timestamp":"2026-04-27T10:00:49Z","level":"INFO","eventType":"MessageSent","data":{"content":"lala","sender":"takis"}}
+{"timestamp":"2026-04-27T10:01:25Z","level":"INFO","eventType":"MessageSent","data":{"content":"(╯°□°）╯︵ ┻━┻","sender":"takis"}}
+{"timestamp":"2026-04-27T10:01:36Z","level":"INFO","eventType":"MessageSent","data":{"content":"\u001b[32mlala\u001b[0m","sender":"takis"}}
+{"timestamp":"2026-04-27T10:02:41Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"takis"}}
+{"timestamp":"2026-04-27T10:02:42Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"marios"}}
+{"timestamp":"2026-04-27T10:10:54Z","level":"INFO","eventType":"ServerStarted","data":{"port":"8989"}}

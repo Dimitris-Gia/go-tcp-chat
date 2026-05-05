@@ -4,7 +4,7 @@ Go application that recreates NetCat functionality in a Server-Client Architectu
 
 ## Description
 
-NetCat TCP Chat is a command-line group chat application that runs in server mode, listening for incoming TCP connections on a specified port. Multiple clients can connect simultaneously (up to 10) and communicate in real-time. The server broadcasts messages to all connected clients, maintains chat history, and notifies users when others join or leave.
+NetCat TCP Chat is a command-line group chat application that runs in server mode, listening for incoming TCP connections on a specified port. Multiple clients can connect simultaneously (up to 10) and communicate in real-time. The server broadcasts messages to all connected clients, maintains chat history, notifies users when others join or leave, and writes an audit log of all events.
 
 ## Authors
 
@@ -31,10 +31,8 @@ go run . 2525 localhost
 ### How to Connect as Client
 
 ```bash
-# Connect to server using netcat
 nc localhost 8989
-
-# Or with custom port
+# or
 nc localhost 2525
 ```
 
@@ -58,6 +56,57 @@ nc localhost 2525
 - **Timestamped Messages**: All messages include timestamp and sender name
 - **Empty Message Filtering**: Empty messages are not broadcast
 - **Graceful Disconnection**: Other clients remain connected when one leaves
+- **Username Change**: Clients can rename themselves mid-session
+- **Color Flags**: Messages can be colored using flag prefixes
+- **Emote Flags**: Shorthand flags expand to ASCII emoticons
+- **ANSI Line Clearing**: Incoming messages clear the prompt line to reduce visual interruption
+- **Audit Logging**: All events written as JSON to `logs/audit.log`
+
+## Commands
+
+### Username Change
+
+```
+--UserNameChange: <new name>
+```
+
+Renames the client. All other clients are notified and the change is stored in history.
+
+### Color Flags
+
+Prefix your message with a color flag:
+
+```
+--red hello everyone
+--green good morning
+--yellow warning!
+--blue just chilling
+--magenta look at me
+--cyan cool message
+```
+
+### Emote Flags
+
+Send a standalone emote flag:
+
+```
+--shrug       →  \_(o_o)_/
+--happy       →  ^_^
+--sad         →  (｡•́︿•̀｡)
+--wow         →  (⚆_⚆)
+--heart       →  <3
+--tableflip   →  (╯°□°）╯︵ ┻━┻
+--unflip      →  ┬─┬ ノ( ゜-゜ノ)
+--lenny       →  ( ͡° ͜ʖ ͡°)
+--disapprove  →  ಠ_ಠ
+--cry         →  T_T
+--kiss        →  ( ˘ ³˘)♥
+--weeping     →  (╥﹏╥)
+--angry       →  ಠ益ಠ
+--confused    →  (;一_一)
+--party       →  └(＾ω＾)」
+--sleepy      →  (-_-) zzz
+```
 
 ## Implementation Details
 
@@ -66,41 +115,53 @@ nc localhost 2525
 1. **Server Initialization**
    - Parse port from command-line arguments (default: 8989)
    - Validate port range (1-65535)
+   - Initialize logger (`logs/audit.log`)
    - Start TCP listener on specified port
    - Accept incoming connections in loop
 
 2. **Connection Handling**
    - Spawn goroutine for each client connection
-   - Send welcome ASCII art (Linux penguin)
-   - Prompt for and read client name
-   - Validate non-empty name
-   - Add client to active connections list
+   - Send welcome ASCII art from `assets/welcome.txt`
+   - Prompt for and read client name (re-prompt on empty)
+   - Enforce max 10 connection limit
+   - Create `Client` with buffered send channel, start `WritePump` goroutine
+   - Deliver chat history before registering in hub
 
 3. **Message Flow**
-   - Send chat history to newly connected client
    - Broadcast join notification to existing clients
    - Continuously read messages from client
+   - Apply chat flags (color/emote) if present
    - Format messages with timestamp and sender name
-   - Broadcast to all other connected clients
+   - Store in history, broadcast to all other clients
    - Filter out empty messages
+   - Reprompt all other clients after each broadcast
 
 4. **Disconnection Handling**
    - Detect client disconnection (EOF or error)
-   - Remove client from active connections
+   - Unregister from hub
    - Broadcast leave notification to remaining clients
-   - Close connection and clean up resources
+   - Store leave message in history
+   - Close client (signals `WritePump` to exit)
 
 5. **Concurrency Management**
-   - Use goroutines for concurrent client handling
-   - Use mutexes or channels to protect shared state
-   - Shared state includes: client list, message history
-   - Thread-safe broadcasting mechanism
+   - Goroutines for concurrent client handling
+   - `Hub` uses mutex to protect client map
+   - `History` uses mutex to protect entries slice
+   - `Client` uses `done` channel + `sync.Once` for safe close
+   - `Client` uses mutex for name access only
+   - `Logger` uses mutex for file writes
 
 6. **Message Format**
    - Timestamp format: `[YYYY-MM-DD HH:MM:SS]`
    - Message format: `[timestamp][username]:[message]`
    - Join notification: `username has joined our chat...`
    - Leave notification: `username has left our chat...`
+   - Rename notification: `oldname is now known as newname`
+
+7. **Terminal UX**
+   - Broadcasts prepend `\r\033[2K` to clear the recipient's current line
+   - Prompt is appended immediately after the message in the same delivery
+   - Reduces visual interruption when a message arrives mid-typing
 
 ### Welcome ASCII Art
 
@@ -125,9 +186,23 @@ _)      \.___.,|     .'
 [ENTER YOUR NAME]:
 ```
 
+## Audit Logging
+
+All events are written as newline-delimited JSON to `logs/audit.log`:
+
+```json
+{"timestamp":"2024-01-01T12:00:00Z","level":"INFO","eventType":"ServerStarted","data":{"port":"8989"}}
+{"timestamp":"2024-01-01T12:00:05Z","level":"INFO","eventType":"ClientJoined","data":{"clientName":"alice","ip":"127.0.0.1:54321","port":""}}
+{"timestamp":"2024-01-01T12:00:10Z","level":"INFO","eventType":"MessageSent","data":{"content":"hello","sender":"alice"}}
+{"timestamp":"2024-01-01T12:00:20Z","level":"INFO","eventType":"ClientDisconnected","data":{"clientName":"alice"}}
+```
+
+Event types: `ServerStarted`, `ServerStopped`, `ClientJoined`, `ClientDisconnected`, `MessageSent`, `NameChanged`, `Error`
+
 ## Testing
 
 ### Unit Tests
+
 ```bash
 # Run all unit tests
 go test ./...
@@ -143,25 +218,46 @@ go test -v ./...
 3. Connect using `nc localhost 8989` in each
 4. Enter different names for each client
 5. Send messages and verify broadcasting
-6. Disconnect clients and verify notifications
-7. Test connection limit (11th connection should be rejected)
+6. Test color flags: `--red hello`
+7. Test emote flags: `--shrug`
+8. Test username change: `--UserNameChange: newname`
+9. Disconnect clients and verify notifications
+10. Test connection limit (11th connection should be rejected)
 
 ## Project Structure
 
 ```
 net-cat/
 ├── main.go                          # Server entry point
+├── main_test.go                     # Integration tests
+├── assets/
+│   └── welcome.txt                  # Linux penguin ASCII art
+├── logs/
+│   └── audit.log                    # Runtime audit log (JSON)
 ├── internal/
-│   ├── connectionhandling/          # Client connection handling
-│   │   └── handler.go
-│   └── parser/                      # Command-line argument parsing
-│       └── parsing.go
-├── ai/                              # Conversation logs
-│   └── ai.txt
+│   ├── connectionhandling/          # Client connection lifecycle
+│   │   ├── handler.go
+│   │   └── handler_test.go
+│   ├── logging/                     # Audit logger
+│   │   ├── events.go
+│   │   ├── logger.go
+│   │   └── logger_test.go
+│   ├── parser/                      # CLI argument parsing
+│   │   ├── parsing.go
+│   │   └── parsing_test.go
+│   └── server/                      # Core server types
+│       ├── client.go
+│       ├── client_test.go
+│       ├── history.go
+│       ├── history_test.go
+│       ├── hub.go
+│       └── hub_test.go
+├── ai/
+│   └── ai.txt                       # Conversation logs
 ├── tasks/                           # Implementation task tracking
-├── prd.md                           # Product requirements
-├── agents.md                        # Agent behavior guidelines
-└── README.md                        # This file
+├── agents.md
+├── prd.md
+└── README.md
 ```
 
 ## Allowed Packages
@@ -171,26 +267,21 @@ net-cat/
 - `os` - Operating system functionality
 - `fmt` - Formatted I/O
 - `net` - Network operations
-- `sync` - Synchronization primitives (mutexes)
+- `sync` - Synchronization primitives
 - `time` - Time operations
 - `bufio` - Buffered I/O
 - `errors` - Error handling
 - `strings` - String manipulation
 - `reflect` - Reflection
+- `encoding/json` - JSON marshalling (for audit log)
+- `path/filepath` - File path utilities (for audit log)
 
 ## Error Handling
 
-- Invalid port number: Display usage message
-- Too many arguments: Display usage message
-- Connection errors: Log and continue accepting new connections
-- Client disconnection: Clean up and notify others
-- Maximum connections reached: Reject new connection gracefully
-
-## Development Guidelines
-
-- Follow TDD methodology (Red-Green-Refactor)
-- Write tests before implementation
-- Use only standard Go library packages
-- Maintain conversation log in `ai/ai.txt`
-- Return "ERROR" string for file format issues
-- Keep code modular and well-organized
+- Invalid port number: display usage message
+- Too many arguments: display usage message
+- Connection errors: log and continue accepting new connections
+- Client disconnection: clean up and notify others
+- Maximum connections reached: reject new connection gracefully
+- Invalid flag usage: return error message to sender only
+- Logger failure: fatal on startup, logged on runtime errors

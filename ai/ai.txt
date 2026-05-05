@@ -131,3 +131,34 @@ Model: GPT-5.3-Codex
 Conversation Summary:
 - User asked why `mu` is undefined in `handler.go` when calling `history.mu.Lock()`.
 - Explained Go visibility rules: lowercase fields are unexported outside their package.
+
+---
+
+Date: 2026-04-24
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User requested using gocui for a terminal UI in the Net-Cat project.
+- Ran `go doc github.com/jroimartin/gocui` to inspect package documentation.
+- Confirmed key API points for initialization, views, keybindings, managers, and thread-safe updates via `Gui.Update`.
+
+---
+
+Date: 2026-04-24
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User asked where to place gocui UI setup inside main function.
+- Clarified placement relative to port parsing, listener setup, and blocking loops.
+- Explained beginner-friendly reasoning about startup order and why UI should not be initialized too early.
+
+---
+
+Date: 2026-04-24
+Model: GPT-5.3-Codex
+
+Conversation Summary:
+- User requested new chat flags for emotes and text colors while keeping main function unchanged.
+- Implemented chat flag parsing in the connection handler for color flags (`--red`, `--green`, `--yellow`, `--blue`, `--magenta`, `--cyan`) and emote flags (`--shrug`, `--happy`, `--sad`, `--wow`).
+- Added tests to validate colored message broadcasting and emote broadcasting.
+- Verified all tests pass across the full repository.

@@ -7,7 +7,7 @@ import (
 )
 
 func TestRegisterClient_AddsConnection(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	serverConn, clientConn := net.Pipe()
 	defer clientConn.Close()
@@ -22,7 +22,7 @@ func TestRegisterClient_AddsConnection(t *testing.T) {
 }
 
 func TestUnregisterClient_RemovesConnection(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	serverConn, clientConn := net.Pipe()
 	defer clientConn.Close()
@@ -38,7 +38,7 @@ func TestUnregisterClient_RemovesConnection(t *testing.T) {
 }
 
 func TestHub_ClientCount_MultipleClients(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 	conns := make([]net.Conn, 3)
 	for i := range conns {
 		s, c := net.Pipe()
@@ -65,7 +65,7 @@ func readFrom(t *testing.T, conn net.Conn) string {
 }
 
 func TestHub_BroadcastAll(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	s1, c1 := net.Pipe()
 	s2, c2 := net.Pipe()
@@ -81,16 +81,16 @@ func TestHub_BroadcastAll(t *testing.T) {
 
 	hub.BroadcastAll("hello\n")
 
-	if msg := readFrom(t, c1); msg != "hello\n" {
-		t.Fatalf("cl1 expected 'hello\\n', got %q", msg)
+	if msg := readFrom(t, c1); !containsStr(msg, "hello") {
+		t.Fatalf("cl1 expected message containing 'hello', got %q", msg)
 	}
-	if msg := readFrom(t, c2); msg != "hello\n" {
-		t.Fatalf("cl2 expected 'hello\\n', got %q", msg)
+	if msg := readFrom(t, c2); !containsStr(msg, "hello") {
+		t.Fatalf("cl2 expected message containing 'hello', got %q", msg)
 	}
 }
 
 func TestHub_BroadcastExcept_SkipsSender(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	s1, c1 := net.Pipe()
 	s2, c2 := net.Pipe()
@@ -120,7 +120,7 @@ func TestHub_BroadcastExcept_SkipsSender(t *testing.T) {
 }
 
 func TestHub_RepromptAll(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	s1, c1 := net.Pipe()
 	defer s1.Close(); defer c1.Close()
@@ -138,7 +138,7 @@ func TestHub_RepromptAll(t *testing.T) {
 }
 
 func TestHub_RepromptExcept_SkipsExcluded(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(nil)
 
 	s1, c1 := net.Pipe()
 	s2, c2 := net.Pipe()

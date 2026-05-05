@@ -48,14 +48,14 @@ func TestGetWelcomeMessage_ContainsPenguin(t *testing.T) {
 }
 
 func TestHandleConnection_SendsWelcomeOnConnect(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	serverConn, clientConn := net.Pipe()
 	defer clientConn.Close()
 
 	r := bufio.NewReader(clientConn)
-	go HandleConnection(serverConn, hub, history)
+	go HandleConnection(serverConn, hub, history, nil)
 
 	got := readUntil(t, r, "[ENTER YOUR NAME]:", clientConn)
 	if !strings.Contains(got, "Welcome to TCP-Chat!") {
@@ -63,15 +63,98 @@ func TestHandleConnection_SendsWelcomeOnConnect(t *testing.T) {
 	}
 }
 
+func TestHandleConnection_RejectsDuplicateName(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	// alice connects first
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	// second client tries to use the same name
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "alice\n")
+
+	got := readUntil(t, r2, "already in use", c2)
+	if !strings.Contains(got, "already in use") {
+		t.Fatalf("expected 'already in use' message, got %q", got)
+	}
+}
+
+func TestHandleConnection_DuplicateNameRepromptAcceptsNewName(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "alice\n") // taken
+	readUntil(t, r2, "already in use", c2)
+	fmt.Fprint(c2, "bob\n") // unique
+
+	got := readUntil(t, r2, "[bob]:", c2)
+	if !strings.Contains(got, "[bob]:") {
+		t.Fatalf("expected prompt with new name, got %q", got)
+	}
+}
+
+func TestHandleConnection_UserNameChange_RejectsDuplicateName(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "bob\n")
+	readUntil(t, r2, "[bob]:", c2)
+
+	// bob tries to rename to alice
+	fmt.Fprint(c2, "--UserNameChange: alice\n")
+
+	got := readUntil(t, r2, "already in use", c2)
+	if !strings.Contains(got, "already in use") {
+		t.Fatalf("expected 'already in use' on rename to taken name, got %q", got)
+	}
+}
+
 func TestHandleConnection_RejectsEmptyName(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	serverConn, clientConn := net.Pipe()
 	defer clientConn.Close()
 
 	r := bufio.NewReader(clientConn)
-	go HandleConnection(serverConn, hub, history)
+	go HandleConnection(serverConn, hub, history, nil)
 
 	// Wait for first prompt
 	readUntil(t, r, "[ENTER YOUR NAME]:", clientConn)
@@ -87,14 +170,14 @@ func TestHandleConnection_RejectsEmptyName(t *testing.T) {
 }
 
 func TestHandleConnection_AcceptsValidName(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	serverConn, clientConn := net.Pipe()
 	defer clientConn.Close()
 
 	r := bufio.NewReader(clientConn)
-	go HandleConnection(serverConn, hub, history)
+	go HandleConnection(serverConn, hub, history, nil)
 
 	readUntil(t, r, "[ENTER YOUR NAME]:", clientConn)
 	fmt.Fprint(clientConn, "alice\n")
@@ -107,7 +190,7 @@ func TestHandleConnection_AcceptsValidName(t *testing.T) {
 }
 
 func TestHandleConnection_ReceivesChatHistory(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 	history.Add("[2020-01-01 00:00:00][old]:hello\n")
 
@@ -115,7 +198,7 @@ func TestHandleConnection_ReceivesChatHistory(t *testing.T) {
 	defer clientConn.Close()
 
 	r := bufio.NewReader(clientConn)
-	go HandleConnection(serverConn, hub, history)
+	go HandleConnection(serverConn, hub, history, nil)
 
 	readUntil(t, r, "[ENTER YOUR NAME]:", clientConn)
 	fmt.Fprint(clientConn, "bob\n")
@@ -127,14 +210,14 @@ func TestHandleConnection_ReceivesChatHistory(t *testing.T) {
 }
 
 func TestHandleConnection_BroadcastsMessageToOtherClient(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	// Connect client1
 	s1, c1 := net.Pipe()
 	defer c1.Close()
 	r1 := bufio.NewReader(c1)
-	go HandleConnection(s1, hub, history)
+	go HandleConnection(s1, hub, history, nil)
 	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
 	fmt.Fprint(c1, "alice\n")
 	readUntil(t, r1, "[alice]:", c1) // wait for prompt
@@ -143,7 +226,7 @@ func TestHandleConnection_BroadcastsMessageToOtherClient(t *testing.T) {
 	s2, c2 := net.Pipe()
 	defer c2.Close()
 	r2 := bufio.NewReader(c2)
-	go HandleConnection(s2, hub, history)
+	go HandleConnection(s2, hub, history, nil)
 	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
 	fmt.Fprint(c2, "bob\n")
 	readUntil(t, r2, "[bob]:", c2) // wait for prompt
@@ -159,13 +242,13 @@ func TestHandleConnection_BroadcastsMessageToOtherClient(t *testing.T) {
 }
 
 func TestHandleConnection_EmptyMessageNotBroadcast(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	s1, c1 := net.Pipe()
 	defer c1.Close()
 	r1 := bufio.NewReader(c1)
-	go HandleConnection(s1, hub, history)
+	go HandleConnection(s1, hub, history, nil)
 	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
 	fmt.Fprint(c1, "alice\n")
 	readUntil(t, r1, "[alice]:", c1)
@@ -173,7 +256,7 @@ func TestHandleConnection_EmptyMessageNotBroadcast(t *testing.T) {
 	s2, c2 := net.Pipe()
 	defer c2.Close()
 	r2 := bufio.NewReader(c2)
-	go HandleConnection(s2, hub, history)
+	go HandleConnection(s2, hub, history, nil)
 	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
 	fmt.Fprint(c2, "bob\n")
 	readUntil(t, r2, "[bob]:", c2)
@@ -192,14 +275,14 @@ func TestHandleConnection_EmptyMessageNotBroadcast(t *testing.T) {
 }
 
 func TestHandleConnection_JoinNotification(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	// alice connects first
 	s1, c1 := net.Pipe()
 	defer c1.Close()
 	r1 := bufio.NewReader(c1)
-	go HandleConnection(s1, hub, history)
+	go HandleConnection(s1, hub, history, nil)
 	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
 	fmt.Fprint(c1, "alice\n")
 	readUntil(t, r1, "[alice]:", c1)
@@ -208,7 +291,7 @@ func TestHandleConnection_JoinNotification(t *testing.T) {
 	s2, c2 := net.Pipe()
 	defer c2.Close()
 	r2 := bufio.NewReader(c2)
-	go HandleConnection(s2, hub, history)
+	go HandleConnection(s2, hub, history, nil)
 	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
 	fmt.Fprint(c2, "bob\n")
 
@@ -219,21 +302,75 @@ func TestHandleConnection_JoinNotification(t *testing.T) {
 	}
 }
 
+func TestHandleConnection_ChangeUserNameUpdatesPrompt(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	serverConn, clientConn := net.Pipe()
+	defer clientConn.Close()
+
+	r := bufio.NewReader(clientConn)
+	go HandleConnection(serverConn, hub, history, nil)
+
+	readUntil(t, r, "[ENTER YOUR NAME]:", clientConn)
+	fmt.Fprint(clientConn, "alice\n")
+	readUntil(t, r, "[alice]:", clientConn)
+
+	fmt.Fprint(clientConn, "--UserNameChange: charlie\n")
+
+	readUntil(t, r, "alice is now known as charlie", clientConn)
+	got := readUntil(t, r, "[charlie]:", clientConn)
+	if !strings.Contains(got, "[charlie]:") {
+		t.Fatalf("expected updated prompt with new name, got %q", got)
+	}
+}
+
+func TestHandleConnection_ChangeUserNameNotifiesOtherClient(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	// Connect alice
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	// Connect bob
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "bob\n")
+	readUntil(t, r2, "[bob]:", c2)
+
+	// alice renames
+	fmt.Fprint(c1, "--UserNameChange: charlie\n")
+
+	got := readUntil(t, r2, "alice is now known as charlie", c2)
+	if strings.Contains(got, "--UserNameChange:") {
+		t.Fatalf("rename command should not be broadcast as a chat message, bob got: %q", got)
+	}
+}
+
 func TestHandleConnection_LeaveNotification(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	s1, c1 := net.Pipe()
 	defer c1.Close()
 	r1 := bufio.NewReader(c1)
-	go HandleConnection(s1, hub, history)
+	go HandleConnection(s1, hub, history, nil)
 	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
 	fmt.Fprint(c1, "alice\n")
 	readUntil(t, r1, "[alice]:", c1)
 
 	s2, c2 := net.Pipe()
 	r2 := bufio.NewReader(c2)
-	go HandleConnection(s2, hub, history)
+	go HandleConnection(s2, hub, history, nil)
 	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
 	fmt.Fprint(c2, "bob\n")
 	readUntil(t, r2, "[bob]:", c2)
@@ -248,7 +385,7 @@ func TestHandleConnection_LeaveNotification(t *testing.T) {
 }
 
 func TestHandleConnection_ConnectionLimit(t *testing.T) {
-	hub := server.NewHub()
+	hub := server.NewHub(nil)
 	history := server.NewHistory()
 
 	// Fill up to maxClients
@@ -257,7 +394,7 @@ func TestHandleConnection_ConnectionLimit(t *testing.T) {
 		s, c := net.Pipe()
 		clientConns[i] = c
 		r := bufio.NewReader(c)
-		go HandleConnection(s, hub, history)
+		go HandleConnection(s, hub, history, nil)
 		readUntil(t, r, "[ENTER YOUR NAME]:", c)
 		fmt.Fprintf(c, "user%d\n", i)
 		readUntil(t, r, fmt.Sprintf("[user%d]:", i), c)
@@ -272,7 +409,7 @@ func TestHandleConnection_ConnectionLimit(t *testing.T) {
 	s11, c11 := net.Pipe()
 	defer c11.Close()
 	r11 := bufio.NewReader(c11)
-	go HandleConnection(s11, hub, history)
+	go HandleConnection(s11, hub, history, nil)
 
 	readUntil(t, r11, "[ENTER YOUR NAME]:", c11)
 	fmt.Fprint(c11, "overflow\n")
@@ -280,5 +417,61 @@ func TestHandleConnection_ConnectionLimit(t *testing.T) {
 	got := readUntil(t, r11, "full", c11)
 	if !strings.Contains(strings.ToLower(got), "full") {
 		t.Fatalf("expected rejection message for 11th client, got %q", got)
+	}
+}
+
+func TestHandleConnection_ColorFlagBroadcastsColoredMessage(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "bob\n")
+	readUntil(t, r2, "[bob]:", c2)
+
+	fmt.Fprint(c1, "--red hello\n")
+
+	got := readUntil(t, r2, "hello", c2)
+	if !strings.Contains(got, "hello") {
+		t.Fatalf("expected colored message, got %q", got)
+	}
+}
+
+func TestHandleConnection_EmoteFlagBroadcastsAsciiEmote(t *testing.T) {
+	hub := server.NewHub(nil)
+	history := server.NewHistory()
+
+	s1, c1 := net.Pipe()
+	defer c1.Close()
+	r1 := bufio.NewReader(c1)
+	go HandleConnection(s1, hub, history, nil)
+	readUntil(t, r1, "[ENTER YOUR NAME]:", c1)
+	fmt.Fprint(c1, "alice\n")
+	readUntil(t, r1, "[alice]:", c1)
+
+	s2, c2 := net.Pipe()
+	defer c2.Close()
+	r2 := bufio.NewReader(c2)
+	go HandleConnection(s2, hub, history, nil)
+	readUntil(t, r2, "[ENTER YOUR NAME]:", c2)
+	fmt.Fprint(c2, "bob\n")
+	readUntil(t, r2, "[bob]:", c2)
+
+	fmt.Fprint(c1, "--shrug\n")
+
+	got := readUntil(t, r2, "\\_(o_o)_/", c2)
+	if !strings.Contains(got, "\\_(o_o)_/") {
+		t.Fatalf("expected emote message, got %q", got)
 	}
 }

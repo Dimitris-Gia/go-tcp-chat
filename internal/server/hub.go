@@ -1,17 +1,23 @@
 package server
 
-import "sync"
+import (
+	"sync"
+
+	"net-cat/internal/logging"
+)
 
 // Hub manages all connected chat clients.
 type Hub struct {
-	mu      sync.Mutex
+	mu     sync.Mutex
 	clients map[*Client]struct{}
+	logger  *logging.Logger
 }
 
-// NewHub creates an empty Hub.
-func NewHub() *Hub {
+// NewHub creates an empty Hub with an optional logger.
+func NewHub(logger *logging.Logger) *Hub {
 	return &Hub{
 		clients: make(map[*Client]struct{}),
+		logger:  logger,
 	}
 }
 
@@ -27,6 +33,21 @@ func (h *Hub) Unregister(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.clients, client)
+	if h.logger != nil {
+		h.logger.LogEvent(logging.LevelInfo, logging.EventClientDisconnected, logging.ClientDisconnectedData(client.GetName()))
+	}
+}
+
+// IsNameTaken returns true if any connected client already has the given name.
+func (h *Hub) IsNameTaken(name string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for c := range h.clients {
+		if c.GetName() == name {
+			return true
+		}
+	}
+	return false
 }
 
 // ClientCount returns the number of currently connected clients.
